@@ -1,0 +1,19 @@
+venv/
+__pycache__/
+
+# environment
+.env
+
+# data files
+data/
+*.wav
+*.mp4
+
+# python artifacts
+*.pyc
+
+# OS files
+.DS_Store
+Thumbs.db
+
+.idea/
