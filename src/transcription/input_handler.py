@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from .audio_extractor import extract_audio_from_video
+from .audio_utils import extract_audio_from_video
 from .audio_handler import prepare_audio_file
 
 
