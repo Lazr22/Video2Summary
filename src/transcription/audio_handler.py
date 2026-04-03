@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from .audio_input_handler import convert_to_wav
+from .audio_utils import convert_to_wav
 
 
 def prepare_audio_file(audio_path: str) -> str:
