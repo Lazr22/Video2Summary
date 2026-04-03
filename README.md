@@ -129,7 +129,7 @@ python src/main.py
 **File:** `src/main.py`
 
 ```python
-from transcription.audio_extractor import extract_audio
+from transcription.audio_utils import extract_audio
 from transcription.chunker import split_audio
 
 if __name__ == "__main__":
