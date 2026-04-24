@@ -7,7 +7,7 @@ A full-stack video summarization app with FastAPI backend and polished HTML fron
 ```
 Video2Summary/
 ├── backend/
-│   ├── main.py          ← FastAPI app (YOUR integration work)
+│   ├── main.py          ← FastAPI app 
 │   ├── pipeline.py      ← Video→Audio→Transcription (teammate 2)
 │   ├── summarizer.py    ← Trained model (teammate 1)
 │   ├── database.py      ← SQLite history
