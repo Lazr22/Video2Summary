@@ -8,7 +8,7 @@ The trained model is not included in this repository due to file size.
 2. Place it in: `backend/models/Final_model/`
 
 The folder should look like this:
-
+```
 backend/
     models/
         Final_model/
@@ -16,22 +16,7 @@ backend/
             model.safetensors
             tokenizer.json
             ...
-
-## Project Structure
-Video2Summary/
-├── backend/
-│   ├── exports/         ← Generated TXT files
-│   ├── models/          ← Trained model files (download separately)
-│   ├── uploads/         ← Temporary video storage
-│   ├── main.py          ← FastAPI app
-│   ├── pipeline.py      ← Video→Audio→Transcription (teammate 2)
-│   ├── summarizer.py    ← Trained model (teammate 1)
-│   ├── database.py      ← SQLite history
-│   ├── export.py        ← TXT export
-│   ├── qa_generator.py  ← Q&A generation (T5 model)
-│   └── requirements.txt
-└── frontend/
-    └── index.html       ← Full UI (open in browser)
+```
 
 ## Setup & Run
 
@@ -52,7 +37,23 @@ python -m uvicorn main:app --reload --port 8000
 Just open `frontend/index.html` in Chrome. Done!
 
 ---
-
+## Project Structure
+```
+Video2Summary/
+├── backend/
+│   ├── exports/         ← Generated TXT files
+│   ├── models/          ← Trained model files (download separately)
+│   ├── uploads/         ← Temporary video storage
+│   ├── main.py          ← FastAPI app
+│   ├── pipeline.py      ← Video→Audio→Transcription (teammate 2)
+│   ├── summarizer.py    ← Trained model (teammate 1)
+│   ├── database.py      ← SQLite history
+│   ├── export.py        ← TXT export
+│   ├── qa_generator.py  ← Q&A generation (T5 model)
+│   └── requirements.txt
+└── frontend/
+    └── index.html       ← Full UI (open in browser)
+```
 ## Features
 - Upload video file (MP4, MOV, AVI, MKV, WEBM)
 - Paste YouTube URL to auto-download and summarize
