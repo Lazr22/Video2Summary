@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Video2Summary</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0b0c10;--surface:#13141a;--surface2:#1c1d26;--border:#2a2b38;
+      --accent:#6c63ff;--accent2:#a78bfa;--green:#4ade80;--amber:#fbbf24;
+      --red:#f87171;--text:#f0f0f5;--muted:#7b7c8e;--dim:#3e3f52;
+    }
+    html{scroll-behavior:smooth}
+    body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;min-height:100vh;overflow-x:hidden}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:40px 40px;opacity:.3;pointer-events:none;z-index:0}
+    body::after{content:'';position:fixed;top:-200px;left:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(108,99,255,.12) 0%,transparent 70%);pointer-events:none;z-index:0}
+
+    .shell{position:relative;z-index:1;display:grid;grid-template-columns:260px 1fr;grid-template-rows:56px 1fr;height:100vh}
+    .topbar{grid-column:1/-1;display:flex;align-items:center;padding:0 24px;border-bottom:1px solid var(--border);background:rgba(11,12,16,.85);backdrop-filter:blur(12px);gap:12px}
+    .logo{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;color:var(--text);display:flex;align-items:center;gap:8px}
+    .logo-dot{width:8px;height:8px;background:var(--accent);border-radius:50%;box-shadow:0 0 8px var(--accent);animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.8)}}
+    .topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+    .status-pill{font-size:11px;font-weight:500;padding:4px 10px;border-radius:20px;background:rgba(74,222,128,.1);color:var(--green);border:1px solid rgba(74,222,128,.2)}
+
+    .sidebar{border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden}
+    .sidebar-header{padding:20px 18px 12px;font-family:'Syne',sans-serif;font-size:11px;font-weight:600;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border)}
+    .history-list{flex:1;overflow-y:auto;padding:8px}
+    .history-list::-webkit-scrollbar{width:4px}
+    .history-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+    .history-empty{padding:40px 20px;text-align:center;color:var(--dim);font-size:13px;line-height:1.6}
+    .history-item{padding:10px 12px;border-radius:8px;cursor:pointer;border:1px solid transparent;transition:all .15s;margin-bottom:4px}
+    .history-item:hover{background:var(--surface2);border-color:var(--border)}
+    .history-item.active{background:rgba(108,99,255,.1);border-color:rgba(108,99,255,.3)}
+    .history-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+    .history-meta{font-size:11px;color:var(--muted);display:flex;gap:8px;align-items:center}
+    .lang-badge{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:10px;font-weight:600;color:var(--accent2);text-transform:uppercase}
+    .qa-badge{background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:4px;padding:1px 5px;font-size:10px;font-weight:600;color:var(--green)}
+
+    .main{display:flex;flex-direction:column;overflow:hidden}
+
+    .upload-zone{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;gap:32px}
+    .upload-card{width:100%;max-width:640px;border:2px dashed var(--border);border-radius:20px;background:var(--surface);padding:52px 40px;text-align:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+    .upload-card::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,rgba(108,99,255,.06) 0%,transparent 70%);opacity:0;transition:opacity .3s}
+    .upload-card:hover,.upload-card.drag-over{border-color:var(--accent);background:rgba(108,99,255,.05)}
+    .upload-card:hover::before,.upload-card.drag-over::before{opacity:1}
+    .upload-icon{width:64px;height:64px;margin:0 auto 20px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 8px 32px rgba(108,99,255,.3)}
+    .upload-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;margin-bottom:8px}
+    .upload-sub{font-size:14px;color:var(--muted);margin-bottom:24px}
+    .upload-formats{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+    .format-tag{font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--muted)}
+    #fileInput{display:none}
+    .or-divider{display:flex;align-items:center;gap:16px;width:100%;max-width:640px;color:var(--dim);font-size:13px}
+    .or-divider::before,.or-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+    .yt-row{display:flex;gap:10px;width:100%;max-width:640px}
+    .yt-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s}
+    .yt-input::placeholder{color:var(--dim)}
+    .yt-input:focus{border-color:var(--accent)}
+    .btn{background:linear-gradient(135deg,var(--accent),#8b83ff);color:white;border:none;border-radius:10px;padding:12px 22px;font-family:'Syne',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;box-shadow:0 4px 16px rgba(108,99,255,.3)}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(108,99,255,.4)}
+    .btn:active{transform:translateY(0)}
+    .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+    .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);box-shadow:none}
+    .btn-ghost:hover{border-color:var(--accent);color:var(--accent);box-shadow:none;transform:none}
+
+    .progress-panel{display:none;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:40px;gap:32px}
+    .progress-panel.active{display:flex}
+    .progress-card{width:100%;max-width:480px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:40px}
+    .progress-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;margin-bottom:8px}
+    .progress-filename{font-size:13px;color:var(--muted);margin-bottom:32px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .steps{display:flex;flex-direction:column;gap:16px}
+    .step{display:flex;align-items:center;gap:14px;opacity:.4;transition:all .4s;transform:translateX(-8px)}
+    .step.active{opacity:1;transform:translateX(0)}
+    .step.done{opacity:.7;transform:translateX(0)}
+    .step-icon{width:36px;height:36px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;transition:all .3s}
+    .step.active .step-icon{background:rgba(108,99,255,.15);border-color:var(--accent);animation:spin-step 1.5s linear infinite}
+    .step.done .step-icon{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3)}
+    @keyframes spin-step{0%,100%{box-shadow:0 0 0 0 rgba(108,99,255,.4)}50%{box-shadow:0 0 0 6px rgba(108,99,255,0)}}
+    .step-label{font-size:14px;font-weight:500}
+    .step-sub{font-size:12px;color:var(--muted)}
+    .progress-bar-wrap{margin-top:28px;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden}
+    .progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .6s ease;width:0%}
+
+    .result-panel{display:none;flex-direction:column;height:100%;overflow:hidden}
+    .result-panel.active{display:flex}
+    .result-topbar{display:flex;align-items:center;gap:12px;padding:16px 24px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .result-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500;background:var(--surface2);border:1px solid var(--border);color:var(--muted);white-space:nowrap}
+
+    .tabs{display:flex;gap:2px;padding:0 24px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface)}
+    .tab{padding:12px 18px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+    .tab:hover{color:var(--text)}
+    .tab.active{color:var(--accent2);border-bottom-color:var(--accent2)}
+
+    .tab-content{flex:1;display:none;overflow:hidden}
+    .tab-content.active{display:flex}
+
+    .result-body{flex:1;display:grid;grid-template-columns:1fr 1fr;overflow:hidden;width:100%}
+    .result-col{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
+    .result-col:last-child{border-right:none}
+    .col-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0}
+    .col-label{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+    .col-label.accent{color:var(--accent2)}
+    .col-content{flex:1;overflow-y:auto;padding:20px;line-height:1.75;font-size:14px;color:var(--text);white-space:pre-wrap}
+    .col-content::-webkit-scrollbar{width:4px}
+    .col-content::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+    .result-footer{border-top:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+    .copy-btn{font-size:12px;padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+    .copy-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+    /* Q&A panel */
+    .qa-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;width:100%}
+    .qa-toolbar{padding:14px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0}
+    .qa-toolbar-info{font-size:13px;color:var(--muted);flex:1}
+    .qa-list{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:12px}
+    .qa-list::-webkit-scrollbar{width:4px}
+    .qa-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+    .qa-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--dim);font-size:14px;gap:12px;padding:40px;text-align:center}
+
+    /* Q&A card — answer hidden by default */
+    .qa-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color .2s}
+    .qa-card:hover{border-color:rgba(108,99,255,.3)}
+    .qa-question{padding:14px 18px;font-size:14px;font-weight:500;color:var(--text);display:flex;gap:10px;align-items:flex-start;cursor:pointer;user-select:none}
+    .qa-question:hover .qa-reveal-hint{opacity:1}
+    .qa-q-badge{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--accent2);background:rgba(108,99,255,.1);border:1px solid rgba(108,99,255,.2);border-radius:6px;padding:2px 7px;flex-shrink:0;margin-top:1px}
+    .qa-q-text{flex:1}
+    .qa-reveal-hint{font-size:11px;color:var(--dim);opacity:0;transition:opacity .2s;flex-shrink:0;margin-top:3px;white-space:nowrap}
+    .qa-answer{padding:12px 18px;font-size:13px;color:var(--muted);line-height:1.6;display:flex;gap:10px;align-items:flex-start;border-top:1px solid var(--border);background:rgba(74,222,128,.03)}
+    .qa-answer.hidden{display:none}
+    .qa-a-badge{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--green);background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:6px;padding:2px 7px;flex-shrink:0;margin-top:1px}
+    .qa-chevron{font-size:12px;color:var(--dim);transition:transform .2s;flex-shrink:0;margin-top:3px}
+    .qa-card.open .qa-chevron{transform:rotate(180deg)}
+    .qa-card.open .qa-answer{display:flex}
+    .qa-card.open{border-color:rgba(108,99,255,.25)}
+
+    .qa-loading{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px;padding:20px 0}
+    .spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .reveal-all-btn{font-size:12px;padding:5px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+    .reveal-all-btn:hover{border-color:var(--green);color:var(--green)}
+
+    .toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 18px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px;z-index:999;transform:translateY(80px);opacity:0;transition:all .3s cubic-bezier(.175,.885,.32,1.275);pointer-events:none}
+    .toast.show{transform:translateY(0);opacity:1}
+    .stats-bar{display:flex;gap:6px;flex-wrap:wrap}
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="topbar">
+    <div class="logo"><div class="logo-dot"></div>Video2Summary</div>
+    <div class="topbar-right">
+      <div class="status-pill" id="statusPill">● API Ready</div>
+    </div>
+  </header>
+
+  <aside class="sidebar">
+    <div class="sidebar-header">History</div>
+    <div class="history-list" id="historyList">
+      <div class="history-empty">No summaries yet.<br/>Upload a video to get started.</div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- UPLOAD -->
+    <div class="upload-zone" id="uploadPanel">
+      <div class="upload-card" id="dropZone">
+        <input type="file" id="fileInput" accept=".mp4,.mov,.avi,.mkv,.webm"/>
+        <div class="upload-icon">🎬</div>
+        <div class="upload-title">Drop your video here</div>
+        <div class="upload-sub">or click to browse files</div>
+        <div class="upload-formats">
+          <span class="format-tag">MP4</span><span class="format-tag">MOV</span>
+          <span class="format-tag">AVI</span><span class="format-tag">MKV</span>
+          <span class="format-tag">WEBM</span>
+        </div>
+      </div>
+      <div class="or-divider">or paste a YouTube link</div>
+      <div class="yt-row">
+        <input type="text" class="yt-input" id="ytInput" placeholder="https://youtube.com/watch?v=..."/>
+        <button class="btn" id="ytBtn">▶ Summarize</button>
+      </div>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="progress-panel" id="progressPanel">
+      <div class="progress-card">
+        <div class="progress-title">Processing video…</div>
+        <div class="progress-filename" id="progressFilename"></div>
+        <div class="steps">
+          <div class="step" id="step1"><div class="step-icon">🎵</div><div><div class="step-label">Extracting audio</div><div class="step-sub">Converting video to audio stream</div></div></div>
+          <div class="step" id="step2"><div class="step-icon">✂️</div><div><div class="step-label">Chunking</div><div class="step-sub">Splitting into segments</div></div></div>
+          <div class="step" id="step3"><div class="step-icon">🎙️</div><div><div class="step-label">Transcribing</div><div class="step-sub">Whisper speech recognition</div></div></div>
+          <div class="step" id="step4"><div class="step-icon">🧠</div><div><div class="step-label">Summarizing</div><div class="step-sub">Running trained model</div></div></div>
+        </div>
+        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBar"></div></div>
+      </div>
+    </div>
+
+    <!-- RESULT -->
+    <div class="result-panel" id="resultPanel">
+      <div class="result-topbar">
+        <div class="result-title" id="resultFilename">—</div>
+        <div class="stats-bar" id="statsBar"></div>
+        <button class="btn btn-ghost" style="font-size:13px;padding:7px 14px;" onclick="showUpload()">＋ New</button>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('summary')">📝 Summary & Transcript</div>
+        <div class="tab" onclick="switchTab('qa')" id="qaTabBtn">❓ Q&amp;A</div>
+      </div>
+
+      <!-- SUMMARY + TRANSCRIPT -->
+      <div class="tab-content active" id="tabSummary">
+        <div class="result-body">
+          <div class="result-col">
+            <div class="col-header"><span class="col-label accent">Summary</span></div>
+            <div class="col-content" id="summaryContent"></div>
+            <div class="result-footer">
+              <button class="copy-btn" onclick="copyText('summaryContent')">⎘ Copy</button>
+              <button class="copy-btn" id="exportTxt">↓ TXT</button>
+            </div>
+          </div>
+          <div class="result-col">
+            <div class="col-header"><span class="col-label">Transcript</span></div>
+            <div class="col-content" id="transcriptContent"></div>
+            <div class="result-footer">
+              <button class="copy-btn" onclick="copyText('transcriptContent')">⎘ Copy</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Q&A TAB -->
+      <div class="tab-content" id="tabQa">
+        <div class="qa-panel">
+          <div class="qa-toolbar">
+            <span class="qa-toolbar-info" id="qaInfo">Click "Generate" to create Q&amp;A pairs from this summary using the T5 model.</span>
+            <button class="reveal-all-btn" id="revealAllBtn" style="display:none" onclick="toggleAllAnswers()">👁 Show all answers</button>
+            <button class="btn" style="font-size:13px;padding:8px 18px;" onclick="loadQA(true)">⚡ Generate</button>
+          </div>
+          <div class="qa-list" id="qaList">
+            <div class="qa-empty">
+              <span style="font-size:36px">❓</span>
+              Questions will appear here.<br/>
+              <span style="font-size:12px;color:var(--dim)">Click a question to reveal its answer.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const API = 'http://localhost:8000';
+  let currentId = null;
+  let allAnswersShown = false;
+
+  // ── DOM ──
+  const uploadPanel   = document.getElementById('uploadPanel');
+  const progressPanel = document.getElementById('progressPanel');
+  const resultPanel   = document.getElementById('resultPanel');
+  const dropZone      = document.getElementById('dropZone');
+  const fileInput     = document.getElementById('fileInput');
+  const progressBar   = document.getElementById('progressBar');
+
+  // ── Upload events ──
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]); });
+  fileInput.addEventListener('change', () => { if (fileInput.files[0]) uploadFile(fileInput.files[0]); });
+  document.getElementById('ytBtn').addEventListener('click', () => {
+    const url = document.getElementById('ytInput').value.trim();
+    if (!url) return showToast('⚠️ Paste a YouTube URL first');
+    uploadYouTube(url);
+  });
+
+  // ── Panels ──
+  function showPanel(name) {
+    uploadPanel.style.display = 'none';
+    progressPanel.classList.remove('active');
+    resultPanel.classList.remove('active');
+    if (name === 'upload')   uploadPanel.style.display = 'flex';
+    if (name === 'progress') progressPanel.classList.add('active');
+    if (name === 'result')   resultPanel.classList.add('active');
+  }
+  function showUpload() { showPanel('upload'); }
+
+  // ── Tabs ──
+  function switchTab(name) {
+    ['summary','qa'].forEach((t, i) => {
+      document.querySelectorAll('.tab')[i].classList.toggle('active', t === name);
+      document.getElementById(t === 'summary' ? 'tabSummary' : 'tabQa').classList.toggle('active', t === name);
+    });
+  }
+
+  // ── Progress steps ──
+  const stepTiming = [800, 1600, 3000, 1200];
+  const stepIcons  = ['🎵','✂️','🎙️','🧠'];
+  function runProgressSteps() {
+    let i = 0;
+    function next() {
+      if (i > 0) {
+        const prev = document.getElementById(`step${i}`);
+        prev.classList.remove('active'); prev.classList.add('done');
+        prev.querySelector('.step-icon').textContent = '✓';
+      }
+      if (i < 4) {
+        document.getElementById(`step${i+1}`).classList.add('active');
+        progressBar.style.width = [20,45,75,95][i] + '%';
+        i++; setTimeout(next, stepTiming[i-1]);
+      }
+    }
+    next();
+  }
+  function resetSteps() {
+    for (let i = 1; i <= 4; i++) {
+      const el = document.getElementById(`step${i}`);
+      el.classList.remove('active','done');
+      el.querySelector('.step-icon').textContent = stepIcons[i-1];
+    }
+    progressBar.style.width = '0%';
+  }
+
+  // ── Upload ──
+  async function uploadFile(file) {
+    document.getElementById('progressFilename').textContent = file.name;
+    showPanel('progress'); resetSteps(); runProgressSteps();
+    const form = new FormData();
+    form.append('file', file);
+    try {
+      const res = await fetch(`${API}/upload`, { method:'POST', body:form });
+      if (!res.ok) throw new Error((await res.json()).detail || 'Upload failed');
+      const data = await res.json();
+      progressBar.style.width = '100%';
+      setTimeout(() => showResult(data), 400);
+      loadHistory();
+    } catch(e) { showToast('❌ ' + e.message); showPanel('upload'); }
+  }
+
+  async function uploadYouTube(url) {
+    document.getElementById('progressFilename').textContent = url;
+    showPanel('progress'); resetSteps(); runProgressSteps();
+    try {
+      const res = await fetch(`${API}/youtube`, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({url})
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || 'YouTube failed');
+      const data = await res.json();
+      progressBar.style.width = '100%';
+      setTimeout(() => showResult(data), 400);
+      loadHistory();
+    } catch(e) { showToast('❌ ' + e.message); showPanel('upload'); }
+  }
+
+  // ── Show result ──
+  function showResult(data) {
+    currentId = data.id;
+    allAnswersShown = false;
+    document.getElementById('resultFilename').textContent = data.filename || 'Result';
+    document.getElementById('summaryContent').textContent = data.summary || '(No summary)';
+    document.getElementById('transcriptContent').textContent = data.transcript || '(No transcript)';
+
+    const statsBar = document.getElementById('statsBar');
+    statsBar.innerHTML = '';
+    if (data.language)   statsBar.innerHTML += `<span class="chip">🌐 ${data.language.toUpperCase()}</span>`;
+    if (data.duration)   statsBar.innerHTML += `<span class="chip">⏱ ${formatDuration(data.duration)}</span>`;
+    if (data.word_count) statsBar.innerHTML += `<span class="chip">📝 ${data.word_count} words</span>`;
+    if (data.read_time)  statsBar.innerHTML += `<span class="chip">👁 ${data.read_time} min read</span>`;
+
+    document.getElementById('exportTxt').onclick = () => downloadExport('txt', data.id);
+
+    // Load saved Q&A from history (if any)
+    loadQA(false);
+
+    switchTab('summary');
+    showPanel('result');
+  }
+
+  // ── Q&A ──
+  async function loadQA(forceGenerate) {
+    if (!currentId) return;
+    const list = document.getElementById('qaList');
+    const info = document.getElementById('qaInfo');
+    const revealBtn = document.getElementById('revealAllBtn');
+
+    list.innerHTML = `<div class="qa-loading"><div class="spinner"></div>${forceGenerate ? 'Generating questions with T5 model…' : 'Loading saved questions…'}</div>`;
+
+    try {
+      let pairs = [];
+
+      if (forceGenerate) {
+        const res = await fetch(`${API}/questions/${currentId}`, { method:'POST' });
+        if (!res.ok) throw new Error((await res.json()).detail || 'Generation failed');
+        pairs = (await res.json()).questions || [];
+      } else {
+        const res = await fetch(`${API}/questions/${currentId}`);
+        if (!res.ok) throw new Error('Could not load');
+        pairs = (await res.json()).questions || [];
+      }
+
+      if (!pairs.length) {
+        list.innerHTML = `<div class="qa-empty"><span style="font-size:36px">❓</span>No questions yet.<br/><span style="font-size:12px;color:var(--dim)">Click "Generate" to create Q&amp;A pairs.</span></div>`;
+        info.textContent = 'Click "Generate" to create Q&A pairs from this summary.';
+        revealBtn.style.display = 'none';
+        return;
+      }
+
+      renderQA(pairs);
+      info.textContent = `${pairs.length} questions — click a question to reveal its answer.`;
+      revealBtn.style.display = 'block';
+      revealBtn.textContent = '👁 Show all answers';
+      allAnswersShown = false;
+
+      // Update history badge
+      loadHistory();
+
+    } catch(e) {
+      list.innerHTML = `<div class="qa-empty"><span style="font-size:36px">❌</span>${escHtml(e.message)}</div>`;
+    }
+  }
+
+  function renderQA(pairs) {
+    const list = document.getElementById('qaList');
+    list.innerHTML = pairs.map((p, i) => `
+      <div class="qa-card" id="qacard-${i}">
+        <div class="qa-question" onclick="toggleAnswer(${i})">
+          <span class="qa-q-badge">Q${i+1}</span>
+          <span class="qa-q-text">${escHtml(p.question)}</span>
+          <span class="qa-reveal-hint">click to reveal</span>
+          <span class="qa-chevron">▼</span>
+        </div>
+        <div class="qa-answer hidden">
+          <span class="qa-a-badge">A</span>
+          <span>${escHtml(p.answer)}</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function toggleAnswer(i) {
+    const card = document.getElementById(`qacard-${i}`);
+    card.classList.toggle('open');
+    const answer = card.querySelector('.qa-answer');
+    answer.classList.toggle('hidden', !card.classList.contains('open'));
+  }
+
+  function toggleAllAnswers() {
+    allAnswersShown = !allAnswersShown;
+    document.querySelectorAll('.qa-card').forEach(card => {
+      card.classList.toggle('open', allAnswersShown);
+      card.querySelector('.qa-answer').classList.toggle('hidden', !allAnswersShown);
+    });
+    document.getElementById('revealAllBtn').textContent = allAnswersShown ? '🙈 Hide all answers' : '👁 Show all answers';
+  }
+
+  // ── History ──
+  async function loadHistory() {
+    try {
+      const items = await (await fetch(`${API}/history`)).json();
+      const list = document.getElementById('historyList');
+      if (!items.length) {
+        list.innerHTML = '<div class="history-empty">No summaries yet.<br/>Upload a video to get started.</div>';
+        return;
+      }
+
+      // For each item, check if questions exist
+      const qaChecks = await Promise.all(
+        items.map(item =>
+          fetch(`${API}/questions/${item.id}`)
+            .then(r => r.json())
+            .then(d => (d.questions || []).length > 0)
+            .catch(() => false)
+        )
+      );
+
+      list.innerHTML = items.map((item, idx) => `
+        <div class="history-item ${item.id === currentId ? 'active' : ''}" onclick="loadHistoryItem(${item.id})">
+          <div class="history-name">${escHtml(item.filename)}</div>
+          <div class="history-meta">
+            <span>${timeAgo(item.created_at)}</span>
+            ${item.language ? `<span class="lang-badge">${item.language}</span>` : ''}
+            ${qaChecks[idx] ? `<span class="qa-badge">Q&amp;A</span>` : ''}
+          </div>
+        </div>`).join('');
+    } catch {}
+  }
+
+  async function loadHistoryItem(id) {
+    try {
+      const items = await (await fetch(`${API}/history`)).json();
+      const item = items.find(i => i.id === id);
+      if (item) { showResult(item); loadHistory(); }
+    } catch {}
+  }
+
+  // ── Helpers ──
+  function downloadExport(type, id) { window.open(`${API}/export/${type}/${id}`, '_blank'); }
+
+  function copyText(elId) {
+    navigator.clipboard.writeText(document.getElementById(elId).textContent)
+      .then(() => showToast('✓ Copied to clipboard'));
+  }
+
+  function formatDuration(s) {
+    const m = Math.floor(s/60), sec = Math.floor(s%60);
+    return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  function escHtml(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function timeAgo(ts) {
+    const d = Date.now()/1000 - ts;
+    if (d < 60) return 'just now';
+    if (d < 3600) return `${Math.floor(d/60)}m ago`;
+    if (d < 86400) return `${Math.floor(d/3600)}h ago`;
+    return `${Math.floor(d/86400)}d ago`;
+  }
+
+  async function checkHealth() {
+    try {
+      if ((await fetch(`${API}/health`)).ok) return;
+      throw new Error();
+    } catch {
+      const p = document.getElementById('statusPill');
+      p.textContent = '● API Offline';
+      p.style.cssText = 'background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.2);color:var(--red)';
+    }
+  }
+
+  showPanel('upload');
+  checkHealth();
+  loadHistory();
+</script>
+</body>
+</html>
