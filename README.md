@@ -1,166 +1,302 @@
-# Video2Summary — Modular Transcription Pipeline
+# Video2Audio Summarizer
 
-A modular pipeline that transforms video content into structured text through a sequence of well-defined processing stages.
+An AI-powered NLP pipeline for video transcription, semantic summarization, and question generation.
 
----
-
-## Project Overview
-
-The system follows a clear processing flow:
-
-```
-VIDEO → AUDIO → CHUNKS → TRANSCRIPTION → FINAL TEXT
-```
-
-Each stage is implemented as an independent module to ensure:
-
-- Separation of concerns
-- Ease of testing and debugging
-- Scalability for future features
-- Maintainable and extensible architecture
-
-The goal is to build the pipeline step by step, with a strong focus on correctness and understanding at each stage.
+The system processes uploaded videos by extracting audio, transcribing speech using Whisper, semantically segmenting the transcript using embeddings, generating summaries, and creating question-answer pairs using a trained T5-based machine learning model.
 
 ---
 
-## System Architecture
+# Features
 
-```
+- Video and audio upload support
+- Audio extraction using FFmpeg
+- Speech-to-text transcription with Whisper
+- Audio chunking for long videos
+- Transcript cleaning and overlap merging
+- Semantic segmentation using embeddings
+- AI-generated summaries
+- ML-based question generation using T5
+- SQLite database integration
+- Export functionality
+- Modular backend architecture
+
+---
+
+# Project Architecture
+
+```text
 S4/
+│
+├── backend/
+│   ├── exports/
+│   ├── models/
+│   ├── uploads/
+│   ├── database.py
+│   ├── export.py
+│   ├── main.py
+│   ├── pipeline.py
+│   ├── qa_generator.py
+│   ├── summarizer.py
+│   └── video2summary.db
 │
 ├── src/
 │   ├── transcription/
-│   │   ├── __init__.py
-│   │   ├── audio_extractor.py   # Video → Audio
-│   │   ├── chunker.py           # Audio → Chunks
-│   │   └── whisper_model.py     # (planned) Chunks → Text
+│   │   ├── semantic/
+│   │   │   ├── embedder.py
+│   │   │   ├── semantic_segmenter.py
+│   │   │   ├── similarity.py
+│   │   │   └── summarizer.py
+│   │   │
+│   │   ├── audio_handler.py
+│   │   ├── audio_utils.py
+│   │   ├── chunker.py
+│   │   ├── cleaner.py
+│   │   ├── input_handler.py
+│   │   ├── merger.py
+│   │   ├── segmenter.py
+│   │   ├── transcription_service.py
+│   │   └── whisper_model.py
 │   │
-│   └── main.py                  # Entry point
+│   ├── utils/
+│   └── test_embedder.py
 │
-├── data/
-│   ├── test.mp4                 # Input video
-│   ├── test.wav                 # Extracted audio
-│   └── chunks/                  # Generated chunks
+├── frontend/
+│   └── index.html
 │
-├── venv/
-├── requirements.txt
-├── .env
-└── config.py
+├── tests/
+│
+├── Training_model/
+│   └── video2qa_t5base.py
+│
+└── venv/
 ```
 
 ---
 
-## Pipeline Components
+# System Workflow
 
-### Audio Extraction
-
-**File:** `src/transcription/audio_extractor.py`
-
-Converts a video file into a `.wav` audio file optimized for speech processing.
-
-- Ensures mono audio (1 channel)
-- Uses 16kHz sampling rate
-- Handles file existence and FFmpeg errors
-
-```python
-extract_audio(video_path: str) -> str
+```text
+Video Upload
+      ↓
+Audio Extraction
+      ↓
+Audio Chunking
+      ↓
+Whisper Transcription
+      ↓
+Transcript Cleaning
+      ↓
+Overlap Merging
+      ↓
+Semantic Segmentation
+      ↓
+Summarization
+      ↓
+Question Generation (T5 Model)
+      ↓
+Export & Storage
 ```
 
 ---
 
-### Audio Chunking
+# Technologies Used
 
-**File:** `src/transcription/chunker.py`
+## Backend
+- Python
+- FastAPI
+- Uvicorn
+- SQLite
 
-Splits audio into smaller overlapping segments.
+## AI / NLP
+- OpenAI Whisper
+- Sentence Transformers
+- Transformers
+- T5
+- NumPy
 
-**Purpose:**
-- Improve processing reliability for long audio
-- Reduce memory constraints
-- Prepare data for transcription models
+## Audio Processing
+- FFmpeg
 
-**Key features:**
-- Configurable chunk duration
-- Overlap between segments
-- Sequential chunk generation
+## Frontend
+- HTML
+- JavaScript
 
-```python
-split_audio(audio_path: str, chunk_duration=60, overlap=10) -> List[str]
+---
+
+# Core Components
+
+## Whisper Transcription
+
+The system uses OpenAI Whisper for speech recognition and transcription. Long audio files are divided into chunks to improve memory efficiency and processing stability.
+
+---
+
+## Semantic Segmentation
+
+The transcript is grouped according to semantic similarity instead of only timestamps or fixed sentence counts.
+
+This improves:
+- topic coherence
+- contextual grouping
+- summary quality
+
+---
+
+## Overlap Merging
+
+Chunked transcription may create duplicated words between neighboring audio chunks.
+
+The merger module removes duplicated overlap while preserving sentence continuity.
+
+---
+
+## ML-Based Question Generation
+
+The system includes a trained T5-based machine learning model for automatic question generation.
+
+The model was trained on datasets containing natural question-answer patterns, allowing it to generate context-aware educational questions from summarized content.
+
+This makes the system useful for:
+- educational platforms
+- lecture summarization
+- revision systems
+- learning assistance
+- content understanding
+
+---
+
+# Installation
+
+## 1. Clone the Repository
+
+```bash
+git clone https://github.com/your-username/video2audio-summarizer.git
+cd video2audio-summarizer
 ```
 
 ---
 
-### Transcription *(Planned)*
+## 2. Create a Virtual Environment
 
-**File:** `src/transcription/whisper_model.py`
-
-This module will:
-- Load a speech-to-text model
-- Process audio chunks independently
-- Combine outputs into a final transcript
-
----
-
-## How to Run
-
-### 1. Create and activate environment
+### Windows
 
 ```bash
 python -m venv venv
 venv\Scripts\activate
 ```
 
-### 2. Install dependencies
+### Linux / macOS
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+---
+
+## 3. Install Dependencies
+
+### Install FastAPI and Uvicorn
+
+```bash
+pip install fastapi uvicorn
+```
+
+### Install Additional Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Execute the pipeline
+---
+
+## 4. Install FFmpeg
+
+FFmpeg is required for audio extraction.
+
+### Windows
+Download FFmpeg and add it to the system PATH.
+
+### Linux
 
 ```bash
-python src/main.py
+sudo apt install ffmpeg
+```
+
+### macOS
+
+```bash
+brew install ffmpeg
 ```
 
 ---
 
-## Entry Point
+# Running the Project
 
-**File:** `src/main.py`
+## Start Backend Server
 
-```python
-from transcription.audio_utils import extract_audio
-from transcription.chunker import split_audio
+From the `backend` directory:
 
-if __name__ == "__main__":
-    video_path = "data/test.mp4"
+```bash
+cd backend
+python -m uvicorn main:app --reload --port 8000
+```
 
-    audio_path = extract_audio(video_path)
-    print("Audio:", audio_path)
+The API server will run at:
 
-    chunks = split_audio(audio_path)
-    print("Chunks:")
-    for c in chunks:
-        print(c)
+```text
+http://127.0.0.1:8000
 ```
 
 ---
 
-## Design Principles
+## Open Frontend
 
-- Modular structure with clear responsibilities
-- Explicit and readable code
-- Incremental development
-- Focus on understanding before optimization
+Open:
 
----
+```text
+frontend/index.html
+```
 
-## Requirements
-
-- Python 3.9+
-- FFmpeg installed and available in `PATH`
+in your browser.
 
 ---
 
-> This project is under active development.  
-> The architecture is designed to evolve while preserving clarity and modularity.
+# Example Output
+
+## Input
+- Lecture video (.mp4)
+
+## Output
+- Full transcript
+- Semantic summary
+- Generated questions
+- Exported files
+
+---
+
+# Future Improvements
+
+- Real-time transcription
+- Speaker diarization
+- Multi-language summarization
+- Improved frontend interface
+- Hosting
+
+---
+
+# Educational Purpose
+
+This project was developed to explore:
+- speech recognition systems
+- NLP pipelines
+- semantic text processing
+- AI summarization techniques
+- machine learning for question generation
+- modular software architecture
+
+---
+
+# License
+
+MIT License
